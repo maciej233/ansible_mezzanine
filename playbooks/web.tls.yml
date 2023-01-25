@@ -1,0 +1,53 @@
+#!/home/maciej/ansible/devops/bin\python ansible-playbook
+- name: Configure webserver with ngnix
+  hosts: webservers
+  become: True
+  become_user: root
+  gather_facts: True
+  vars:
+    key_file: /etc/nginx/ssl/nginx.key
+    cert_file: /etc/nginx/ssl/nginx.crt
+    conf_file: /etc/nginx/sites-available/default
+    server_name: localhost
+  tasks:
+    - name: Install ngnix
+      apt: name=nginx update_cache=True
+
+    - name: create dictonary for cert and key
+      file: path=/etc/nginx/ssl state=directory
+
+    - name: copy key file
+      copy: >
+        src=files/nginx.key
+        dest={{key_file}}
+        owner=root
+        mode=0600
+      notify: restart nginx
+
+    - name: copy cert file
+      copy: >
+        src=files/nginx.crt
+        dest={{cert_file}}
+      notify: restart nginx
+
+    - name: copy nginx config files
+      template: >
+        src=templates/nginx.conf.j2
+        dest={{conf_file}}
+      tags: tag1
+      notify: restart nginx
+
+    - name: enabale configuration
+      file: >
+        src={{conf_file}}
+        dest=/etc/nginx/sites-enabled/default
+        state=link
+
+    - name: copy index.html
+      template: >
+         src=templates/index.html.j2
+         dest=/usr/share/nginx/html/index.html
+         mode=0644
+  handlers:
+    - name: restart nginx
+      service: name=nginx state=restarted

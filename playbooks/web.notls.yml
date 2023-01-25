@@ -1,0 +1,30 @@
+#!/home/maciej/ansible/devops/bin\python ansible-playbook
+- name: Configure webserver with ngnix
+  hosts: webservers
+  become: True
+  become_user: root
+  gather_facts: True
+  tasks:
+    - name: Install ngnix
+      apt: name=nginx update_cache=True
+
+    - name: copy nginx config files
+      copy: >
+        src=files/nginx.conf
+        dest=/etc/nginx/sites-available/default
+
+    - name: enabale configuration
+      file: >
+        src=/etc/nginx/sites-available/default
+        dest=/etc/nginx/sites-enabled/default
+        state=link
+
+    - name: copy index.html
+      template: >
+         src=templates/index.html.j2
+         dest=/usr/share/nginx/html/index.html
+         mode=0644
+
+    - name: restart nginx
+      service: name=nginx state=restarted
+      tags: tag1
